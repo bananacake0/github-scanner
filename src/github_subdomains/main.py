@@ -536,67 +536,182 @@ def load_domains(domain_arg: Optional[str], domain_list_arg: Optional[str]) -> L
     return domains
 
 
-app = typer.Typer(help="GitHub Subdomain Enumeration Tool using AsyncIO")
-
-
-@app.command()
 def scan(
+
+
     domain: Optional[str] = typer.Option(None, "--domain", "-d", help="Single domain to scan"),
+
+
     domain_list: Optional[str] = typer.Option(
+
+
         None, "--domain-list", "-l", help="File containing domains (one per line)"
+
+
     ),
+
+
     token: Optional[List[str]] = typer.Option(
+
+
         None, "--token", "-t", help="GitHub token (can be used multiple times for rotation)"
+
+
     ),
+
+
     token_file: Optional[str] = typer.Option(
+
+
         None, "--token-file", "-tf", help="File containing GitHub tokens (one per line)"
+
+
     ),
+
+
     output: Optional[str] = typer.Option(
+
+
         None, "--output", "-o", help="Combined output file for all results"
+
+
     ),
+
+
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
+
+
     max_pages: int = typer.Option(5, "--max-pages", help="Maximum pages to fetch per domain"),
+
+
     concurrent_limit: int = typer.Option(
+
+
         5, "--concurrent-limit", help="Maximum concurrent requests"
+
+
     ),
+
+
 ) -> None:
+
+
     """
+
+
     Scan GitHub for subdomains.
+
+
     """
+
+
     if verbose:
+
+
         logger.setLevel(logging.DEBUG)
 
+
+
+
+
     tokens = load_tokens(token, token_file)
+
+
     if not tokens:
+
+
         logger.error("GitHub token(s) required")
+
+
         raise typer.Exit(code=1)
+
+
+
+
 
     domains = load_domains(domain, domain_list)
+
+
     if not domains:
+
+
         logger.error("Domain (-d) or domain list (-l) required")
+
+
         raise typer.Exit(code=1)
 
+
+
+
+
     token_rotator = TokenRotator(tokens, verbose=verbose)
+
+
     logger.info(f"Loaded {len(tokens)} token(s) for rotation")
 
+
+
+
+
     async def run_scanner() -> None:
+
+
         async with GitHubSubdomainScanner(
+
+
             token_rotator=token_rotator,
+
+
             verbose=verbose,
+
+
             max_pages=max_pages,
+
+
             concurrent_limit=concurrent_limit,
+
+
         ) as scanner:
+
+
             if not await scanner.validate_token():
+
+
                 raise typer.Exit(code=1)
 
+
+
+
+
             await scanner.scan_domains(domains, output)
+
+
             logger.info("Scan complete!")
 
+
+
+
+
             if len(tokens) > 1:
+
+
                 token_rotator.print_stats()
+
+
+
+
 
     asyncio.run(run_scanner())
 
 
+
+
+
+
+
+
 if __name__ == "__main__":
-    app()
+
+
+    typer.run(scan)
+
