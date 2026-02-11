@@ -536,6 +536,13 @@ def load_domains(domain_arg: Optional[str], domain_list_arg: Optional[str]) -> L
     return domains
 
 
+app = typer.Typer(
+    help="GitHub Subdomain Enumeration Tool using AsyncIO",
+    context_settings={"help_option_names": ["-h", "--help"]}
+)
+
+
+@app.command()
 def scan(
 
 
@@ -581,19 +588,22 @@ def scan(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
 
 
-    max_pages: int = typer.Option(5, "--max-pages", help="Maximum pages to fetch per domain"),
+        max_pages: int = typer.Option(5, "--max-pages", "-m", help="Maximum pages to fetch per domain"),
 
 
-    concurrent_limit: int = typer.Option(
+        concurrent_limit: int = typer.Option(
 
 
-        5, "--concurrent-limit", help="Maximum concurrent requests"
+            5, "--concurrent-limit", "-c", help="Maximum concurrent requests"
 
 
-    ),
+        ),
 
 
-) -> None:
+    ) -> None:
+
+
+    
 
 
     """
