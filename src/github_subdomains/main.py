@@ -467,6 +467,11 @@ class GitHubSubdomainScanner:
 
         # Write all results to combined file if specified
         if output_file and all_subdomains:
+            # Ensure parent directory exists
+            output_path = Path(output_file)
+            if output_path.parent:
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+
             with open(output_file, "w") as f:
                 for subdomain in sorted(all_subdomains):
                     f.write(f"{subdomain}\n")
