@@ -17,7 +17,7 @@ Ensure you have [uv](https://github.com/astral-sh/uv) installed.
 ```bash
 git clone https://github.com/yourusername/github-scanner.git
 cd github-scanner
-uv venv
+uv venv --python 3.12
 source .venv/bin/activate
 uv pip install -r requirements.txt
 ```
@@ -29,24 +29,15 @@ uv pip install -r requirements.txt
 Scan a single domain:
 
 ```bash
-./github-subdomains scan -d example.com -t YOUR_GITHUB_TOKEN
+uv run python3 github-subdomains.py -d example.com -t YOUR_GITHUB_TOKEN
 ```
 
-### Multiple Domains
+### Shell Completion
 
-Scan domains from a list:
+This tool supports tab-completion for flags and options to make the CLI easier to use.
 
-```bash
-./github-subdomains scan -l domains.txt -t YOUR_GITHUB_TOKEN
-```
-
-### Token Rotation
-
-Provide multiple tokens via flags or a file:
-
-```bash
-./github-subdomains scan -d example.com -t TOKEN1 -t TOKEN2 -tf tokens.txt
-```
+- **`--install-completion`**: Automatically detects your shell (Bash, Zsh, or Fish) and adds a completion script to your shell's configuration file (e.g., `.zshrc`). After running this and restarting your terminal, you can press `Tab` to autocomplete flags like `-d` or `-tf`.
+- **`--show-completion`**: Displays the completion script in the terminal without installing it. This is useful for manual inspection or custom setups.
 
 ### Authentication Options
 
@@ -56,6 +47,16 @@ Tokens can be provided in several ways (in order of precedence):
 3. `GITHUB_TOKEN` environment variable
 4. `GITHUB_TOKENS` environment variable (comma-separated)
 5. `.env` file containing `GITHUB_TOKEN` or `GITHUB_TOKENS`
+
+## Repository & Ignored Files
+
+The project includes a `.gitignore` file to ensure that temporary, private, or environment-specific files are not committed to the repository:
+
+- **`.venv/`**: Keeps the Python virtual environment local.
+- **`*.txt` / `*.tmp`**: Prevents scan results (like `example.com.txt`) from being accidentally committed.
+- **`.env`**: Protects your private GitHub tokens and configuration.
+- **`todo.md`**: A local-only file used for tracking development progress.
+- **`__pycache__/`**: Standard Python bytecode cache.
 
 ## Development
 
@@ -73,6 +74,6 @@ uv run mypy .
 ### Testing
 
 ```bash
-uv pip install pytest
-uv run pytest
+uv pip install pytest pytest-asyncio
+PYTHONPATH=src uv run pytest
 ```
