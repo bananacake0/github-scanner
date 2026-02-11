@@ -1,11 +1,15 @@
 import pytest
+import os
+import shutil
+from pathlib import Path
 from github_subdomains.main import TokenRotator, GitHubSubdomainScanner
-import asyncio
+import unittest.mock as mock
+
 
 def test_token_rotator():
     tokens = ["token1", "token2", "token3"]
     rotator = TokenRotator(tokens)
-    
+
     assert rotator.get_current_token() == "token1"
     rotator._rotate()
     assert rotator.get_current_token() == "token2"
@@ -13,21 +17,25 @@ def test_token_rotator():
     assert rotator.get_current_token() == "token3"
     rotator._rotate()
     assert rotator.get_current_token() == "token1"
-    
+
     assert rotator.token_stats["token2"]["rate_limited"] == 1
+
 
 def test_extract_subdomains():
     rotator = TokenRotator(["token"])
     scanner = GitHubSubdomainScanner(rotator)
-    
-    content = "Check out dev.example.com and api.example.com or maybe test-1.example.com"
+
+    content = (
+        "Check out dev.example.com and api.example.com or maybe test-1.example.com"
+    )
     domain = "example.com"
-    
+
     found = scanner.extract_subdomains(content, domain)
     assert "dev.example.com" in found
     assert "api.example.com" in found
     assert "test-1.example.com" in found
     assert len(found) == 3
+
 
 @pytest.mark.asyncio
 async def test_validate_token_failure():
@@ -41,4 +49,22 @@ async def test_validate_token_failure():
             result = await scanner.validate_token()
             assert result is False
         except Exception:
-            pass # Network errors are also fine for this simple test
+            pass  # Network errors are also fine for this simple test
+
+
+@pytest.mark.asyncio
+async def test_scan_domains_output_dir_creation(tmp_path):
+    rotator = TokenRotator(["token"])
+    async with GitHubSubdomainScanner(rotator) as scanner:
+        # Mock scan_domain to return a set of subdomains
+        with mock.patch.object(scanner, "scan_domain", return_value={"test.example.com"}):
+            output_dir = tmp_path / "new_dir" / "subdir"
+            output_file = output_dir / "results.txt"
+
+            # This should not raise FileNotFoundError
+            await scanner.scan_domains(["example.com"], output_file=str(output_file))
+
+            assert output_file.exists()
+            with open(output_file, "r") as f:
+                content = f.read()
+                assert "test.example.com" in content
