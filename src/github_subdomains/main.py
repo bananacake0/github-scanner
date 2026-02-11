@@ -171,15 +171,15 @@ class GitHubSubdomainScanner:
                         logger.info(f"Rate limit resets at: {reset_time}")
                     return True
                 else:
-                    logger.error(
-                        f"Invalid token or API error (HTTP {response.status})"
-                    )
+                    logger.error(f"Invalid token or API error (HTTP {response.status})")
                     return False
         except Exception as e:
             logger.error(f"Error validating token: {e}")
             return False
 
-    async def handle_rate_limit(self, headers: Mapping[str, Any], retry_count: int = 0) -> bool:
+    async def handle_rate_limit(
+        self, headers: Mapping[str, Any], retry_count: int = 0
+    ) -> bool:
         """Handle rate limiting with exponential backoff"""
         remaining = int(headers.get("x-ratelimit-remaining", 1))
         reset = int(headers.get("x-ratelimit-reset", 0))
@@ -196,7 +196,9 @@ class GitHubSubdomainScanner:
             else:
                 current_time = int(datetime.now().timestamp())
                 wait_time = max(reset - current_time + 5, 0)
-                logger.warning(f"Primary rate limit. Waiting {wait_time}s until reset...")
+                logger.warning(
+                    f"Primary rate limit. Waiting {wait_time}s until reset..."
+                )
 
             if wait_time > 0:
                 # Try to rotate to another token instead of waiting
@@ -239,7 +241,9 @@ class GitHubSubdomainScanner:
 
         return False  # No retry needed
 
-    async def make_request(self, url: str, max_retries: int = 5) -> Optional[dict[str, Any]]:
+    async def make_request(
+        self, url: str, max_retries: int = 5
+    ) -> Optional[dict[str, Any]]:
         """Make an API request with retry logic"""
         retry_count = 0
 
@@ -261,7 +265,9 @@ class GitHubSubdomainScanner:
                             )
                             if should_retry:
                                 retry_count += 1
-                                await asyncio.sleep(2**retry_count)  # Exponential backoff
+                                await asyncio.sleep(
+                                    2**retry_count
+                                )  # Exponential backoff
                                 continue
                             else:
                                 return None
@@ -322,9 +328,7 @@ class GitHubSubdomainScanner:
 
             if not data or "items" not in data:
                 if self.verbose:
-                    logger.warning(
-                        f"No items on page {page}. Stopping pagination."
-                    )
+                    logger.warning(f"No items on page {page}. Stopping pagination.")
                 break
 
             items = data["items"]
@@ -337,9 +341,9 @@ class GitHubSubdomainScanner:
                 html_url = item.get("html_url", "")
                 if html_url:
                     # Convert to raw URL
-                    raw_url = html_url.replace("github.com", "raw.githubusercontent.com").replace(
-                        "/blob/", "/"
-                    )
+                    raw_url = html_url.replace(
+                        "github.com", "raw.githubusercontent.com"
+                    ).replace("/blob/", "/")
                     urls.append(raw_url)
 
             # Small delay between pages
@@ -358,12 +362,16 @@ class GitHubSubdomainScanner:
 
         if os.path.exists(output_file):
             if self.verbose:
-                logger.info("Found existing results file. Will merge with new findings.")
+                logger.info(
+                    "Found existing results file. Will merge with new findings."
+                )
             try:
                 with open(output_file, "r") as f:
                     previous_subdomains = {line.strip() for line in f if line.strip()}
                 if self.verbose:
-                    logger.info(f"Loaded {len(previous_subdomains)} previous subdomains")
+                    logger.info(
+                        f"Loaded {len(previous_subdomains)} previous subdomains"
+                    )
             except Exception as e:
                 if self.verbose:
                     logger.warning(f"Could not read previous results: {e}")
@@ -441,10 +449,14 @@ class GitHubSubdomainScanner:
 
         return all_subdomains
 
-    async def scan_domains(self, domains: List[str], output_file: Optional[str] = None) -> Set[str]:
+    async def scan_domains(
+        self, domains: List[str], output_file: Optional[str] = None
+    ) -> Set[str]:
         """Scan multiple domains"""
         logger.info(f"Processing {len(domains)} domain(s)")
-        logger.info("Individual results will be saved as <domain>.txt in current directory")
+        logger.info(
+            "Individual results will be saved as <domain>.txt in current directory"
+        )
 
         all_subdomains: Set[str] = set()
 
@@ -455,13 +467,20 @@ class GitHubSubdomainScanner:
 
         # Write all results to combined file if specified
         if output_file and all_subdomains:
+            # Ensure parent directory exists
+            output_path = Path(output_file)
+            if output_path.parent:
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+
             with open(output_file, "w") as f:
                 for subdomain in sorted(all_subdomains):
                     f.write(f"{subdomain}\n")
 
             logger.info(f"Combined results also saved to: {output_file}")
 
-        logger.info(f"Total unique subdomains across all domains: {len(all_subdomains)}")
+        logger.info(
+            f"Total unique subdomains across all domains: {len(all_subdomains)}"
+        )
 
         return all_subdomains
 
@@ -475,7 +494,9 @@ def load_env_tokens() -> List[str]:
         tokens.append(settings.github_token)
 
     if settings.github_tokens:
-        tokens.extend([t.strip() for t in settings.github_tokens.split(",") if t.strip()])
+        tokens.extend(
+            [t.strip() for t in settings.github_tokens.split(",") if t.strip()]
+        )
 
     return tokens
 
@@ -514,7 +535,9 @@ def load_tokens(
     return tokens
 
 
-def load_domains(domain_arg: Optional[str], domain_list_arg: Optional[str]) -> List[str]:
+def load_domains(
+    domain_arg: Optional[str], domain_list_arg: Optional[str]
+) -> List[str]:
     """Load domains from file or argument"""
     domains: List[str] = []
 
@@ -538,190 +561,93 @@ def load_domains(domain_arg: Optional[str], domain_list_arg: Optional[str]) -> L
 
 app = typer.Typer(
     help="GitHub Subdomain Enumeration Tool using AsyncIO",
-    context_settings={"help_option_names": ["-h", "--help"]}
+    context_settings={"help_option_names": ["-h", "--help"]},
 )
 
 
-@app.command()
+@app.command("version")
+def version():
+    """Show version"""
+    typer.echo("1.0.0")
+
+
+@app.command("scan")
 def scan(
-
-
-    domain: Optional[str] = typer.Option(None, "--domain", "-d", help="Single domain to scan"),
-
-
+    domain: Optional[str] = typer.Option(
+        None, "--domain", "-d", help="Single domain to scan"
+    ),
     domain_list: Optional[str] = typer.Option(
-
-
         None, "--domain-list", "-l", help="File containing domains (one per line)"
-
-
     ),
-
-
     token: Optional[List[str]] = typer.Option(
-
-
-        None, "--token", "-t", help="GitHub token (can be used multiple times for rotation)"
-
-
+        None,
+        "--token",
+        "-t",
+        help="GitHub token (can be used multiple times for rotation)",
     ),
-
-
     token_file: Optional[str] = typer.Option(
-
-
         None, "--token-file", "-tf", help="File containing GitHub tokens (one per line)"
-
-
     ),
-
-
     output: Optional[str] = typer.Option(
-
-
         None, "--output", "-o", help="Combined output file for all results"
-
-
     ),
-
-
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
-
-
-        max_pages: int = typer.Option(5, "--max-pages", "-m", help="Maximum pages to fetch per domain"),
-
-
-        concurrent_limit: int = typer.Option(
-
-
-            5, "--concurrent-limit", "-c", help="Maximum concurrent requests"
-
-
-        ),
-
-
-    ) -> None:
-
-
-    
-
-
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Enable verbose output"
+    ),
+    max_pages: int = typer.Option(
+        5, "--max-pages", "-m", help="Maximum pages to fetch per domain"
+    ),
+    concurrent_limit: int = typer.Option(
+        5, "--concurrent-limit", "-c", help="Maximum concurrent requests"
+    ),
+) -> None:
     """
 
 
     Scan GitHub for subdomains.
-
-
     """
 
-
     if verbose:
-
-
         logger.setLevel(logging.DEBUG)
-
-
-
-
 
     tokens = load_tokens(token, token_file)
 
-
     if not tokens:
-
-
         logger.error("GitHub token(s) required")
 
-
         raise typer.Exit(code=1)
-
-
-
-
 
     domains = load_domains(domain, domain_list)
 
-
     if not domains:
-
-
         logger.error("Domain (-d) or domain list (-l) required")
-
 
         raise typer.Exit(code=1)
 
-
-
-
-
     token_rotator = TokenRotator(tokens, verbose=verbose)
-
 
     logger.info(f"Loaded {len(tokens)} token(s) for rotation")
 
-
-
-
-
     async def run_scanner() -> None:
 
-
         async with GitHubSubdomainScanner(
-
-
             token_rotator=token_rotator,
-
-
             verbose=verbose,
-
-
             max_pages=max_pages,
-
-
             concurrent_limit=concurrent_limit,
-
-
         ) as scanner:
-
-
             if not await scanner.validate_token():
-
-
                 raise typer.Exit(code=1)
-
-
-
-
 
             await scanner.scan_domains(domains, output)
 
-
             logger.info("Scan complete!")
 
-
-
-
-
             if len(tokens) > 1:
-
-
                 token_rotator.print_stats()
-
-
-
-
 
     asyncio.run(run_scanner())
 
 
-
-
-
-
-
-
 if __name__ == "__main__":
-
-
-    typer.run(scan)
-
+    app()
